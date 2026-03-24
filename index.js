@@ -1,41 +1,51 @@
-// 1. Carrega o sistema de segurança (lê o arquivo .env)
 require('dotenv').config();
-
-// 2. Importa a biblioteca do Google Gemini
+const express = require('express');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const PDFDocument = require('pdfkit');
+const path = require('path');
 
-// 3. Verifica se a chave foi carregada corretamente
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-    console.error("❌ ERRO: Chave da API não encontrada. Verifique seu arquivo .env!");
-    process.exit(1);
-}
+const app = express();
+app.use(express.json());
+app.use(express.static('public')); // Serve o arquivo HTML da pasta public
 
-// 4. Conecta com a IA usando a sua chave secreta
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-async function executarAgente() {
+// ROTA 1: Enviar pergunta para a IA
+app.post('/chat', async (req, res) => {
     try {
-        console.log("⏳ Conectando aos servidores do Google...");
-
-        // 5. Escolhe o modelo de IA que vamos usar
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-        // 6. ENGENHARIA DE PROMPT (Sua vez de brilhar!)
-        const prompt = "Explique o que é Computação em Nuvem em exatamente um parágrafo curto, usando a linguagem de um pirata dos sete mares.";
-
-        // 7. Envia a pergunta e espera (await) a resposta
+        const { prompt } = req.body;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
         const result = await model.generateContent(prompt);
         const resposta = result.response.text();
-
-        console.log("\n🤖 [AGENTE GEMINI]:");
-        console.log(resposta);
-        console.log("\n✅ Missão Concluída.");
-
+        
+        res.json({ texto: resposta });
     } catch (erro) {
-        console.error("❌ Ocorreu um erro na conexão:", erro.message);
+        console.error(erro);
+        res.status(500).json({ erro: "Erro na IA" });
     }
-}
+});
 
-// Roda o sistema
-executarAgente();
+// ROTA 2: Gerar e enviar o PDF
+app.post('/gerar-pdf', (req, res) => {
+    const { texto } = req.body;
+    const doc = new PDFDocument();
+
+    // Configura o cabeçalho para download de arquivo
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=resultado.pdf');
+
+    doc.pipe(res);
+
+    // Conteúdo do PDF
+    doc.fontSize(20).text("Relatório da IA", { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(texto, { align: 'justify' });
+    
+    doc.end();
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+});
