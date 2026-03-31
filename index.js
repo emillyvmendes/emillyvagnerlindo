@@ -1,8 +1,8 @@
-require('dotenv').config();
-const express = require('express');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const PDFDocument = require('pdfkit');
-const path = require('path');
+import 'dotenv/config'; // Forma moderna de carregar o dotenv
+import express from 'express';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import PDFDocument from 'pdfkit';
+import path from 'path';
 
 const app = express();
 app.use(express.json());
@@ -14,7 +14,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post('/chat', async (req, res) => {
     try {
         const { prompt } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
         
         const result = await model.generateContent(prompt);
         const resposta = result.response.text();
